@@ -1,16 +1,17 @@
 import 'dart:convert';
 
-import 'package:coffee_menu/services/coffee_list.dart';
+import 'package:coffee_menu/model/coffee_list.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 
-Future<List<Coffee>> fetchCoffeeList() async {
+Future<CoffeeList> fetchCoffeeList() async {
   const url = "https://smooth-imaginary-anemone.glitch.me";
   final response = await get(Uri.parse(url));
   if( response.statusCode == 200) {
-    return [
-      for ( final item in jsonDecode(response.body)) Coffee.fromJson(item),
-    ];
+    final jsonResponse = json.decode(response.body);
+    CoffeeList list = CoffeeList.fromJson(jsonResponse);
+    print(list);
+    return list;
   } else {
     throw Exception('Failed to get data');
   }
@@ -24,7 +25,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  late Future<List<Coffee>> coffeeList;
+  late Future<CoffeeList> coffeeList;
 
   @override
   void initState() {
@@ -47,23 +48,22 @@ class _HomeState extends State<Home> {
           )
         ],
       ),
-      body: FutureBuilder<List<Coffee>>(
+      body: FutureBuilder<CoffeeList>(
         future: coffeeList,
         builder: (context, snapshot) {
           if( snapshot.hasData) {
             ListView.builder(
-              itemCount: snapshot.data?.length,
+              itemCount: snapshot.data?.coffees.length,
               itemBuilder: (context, index) {
                 return Card(
                   child: ListTile(
                     onTap: (){},
-                    title: Text(snapshot.data![index].title),
+                    title: Text(snapshot.data!.coffees[index].title),
                   ),
                 );
               },
             );
           } else if ( snapshot.hasError) {
-            print(snapshot.error);
             return Text('${snapshot.error}');
           }
           return const CircularProgressIndicator();
