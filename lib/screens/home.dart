@@ -1,37 +1,13 @@
 import 'dart:convert';
+import 'dart:core';
 
 import 'package:coffee_menu/model/coffee_list.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
+import 'package:http/http.dart' as http;
 
-Future<CoffeeList> fetchCoffeeList() async {
-  const url = "https://smooth-imaginary-anemone.glitch.me";
-  final response = await get(Uri.parse(url));
-  if( response.statusCode == 200) {
-    final jsonResponse = json.decode(response.body);
-    CoffeeList list = CoffeeList.fromJson(jsonResponse);
-    print(list);
-    return list;
-  } else {
-    throw Exception('Failed to get data');
-  }
-}
-
-class Home extends StatefulWidget {
+class Home extends StatelessWidget {
   const Home({Key? key}) : super(key: key);
-
-  @override
-  State<Home> createState() => _HomeState();
-}
-
-class _HomeState extends State<Home> {
-  late Future<CoffeeList> coffeeList;
-
-  @override
-  void initState() {
-    super.initState();
-    coffeeList = fetchCoffeeList();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,27 +24,54 @@ class _HomeState extends State<Home> {
           )
         ],
       ),
-      body: FutureBuilder<CoffeeList>(
-        future: coffeeList,
+      body: FutureBuilder<List<Coffee>>(
+        future: fetchCoffees(http.Client()),
         builder: (context, snapshot) {
-          if( snapshot.hasData) {
-            ListView.builder(
-              itemCount: snapshot.data?.coffees.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  child: ListTile(
-                    onTap: (){},
-                    title: Text(snapshot.data!.coffees[index].title),
-                  ),
-                );
-              },
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text('Error'),
             );
-          } else if ( snapshot.hasError) {
-            return Text('${snapshot.error}');
+          } else if (snapshot.hasData) {
+            return CoffeeList(coffees: snapshot.data!);
+          } else {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
-          return const CircularProgressIndicator();
         },
       ),
     );
   }
+}
+
+class CoffeeList extends StatelessWidget {
+  const CoffeeList({Key? key, required this.coffees}) : super(key: key);
+  final List<Coffee> coffees;
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      gridDelegate:
+          const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
+      itemCount: coffees.length,
+      itemBuilder: (context, i) {
+        return Card(
+          child: Image.network(
+            coffees[i].image,
+            fit: BoxFit.cover,
+          ),
+        );
+      },
+    );
+  }
+}
+
+Future<List<Coffee>> fetchCoffees(http.Client client) async {
+  final response =
+      await client.get(Uri.parse('https://smooth-imaginary-anemone.glitch.me'));
+  return compute(parseCoffees, response.body);
+}
+
+List<Coffee> parseCoffees(String responseBody) {
+  final parsed = jsonDecode(responseBody).cast<Map<String, dynamic>>();
+  return parsed.map<Coffee>((json) => Coffee.fromJson(json)).toList();
 }

@@ -64,7 +64,7 @@ class _LandingState extends State<Landing> {
                     style: TextStyle(fontSize: 21),
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ),
